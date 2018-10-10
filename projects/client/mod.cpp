@@ -13,14 +13,21 @@
 #define MAFIA_SDK_IMPLEMENTATION
 #include "m2sdk.h"
 
+void* CIE_Alloc(size_t siz) {
+    DWORD functionAddress = 0x00401830;
+    __asm {
+        push siz
+        call functionAddress
+        add esp, 0x4
+    };
+}
+
 #include "m2o_client.h"
 #include "m2o_types.h"
 
 #include "mod/mod.h"
 #include "mod/vehicle.h"
 #include "mod/pedestrian.h"
-
-#include "minhook/include/MinHook.h"
 
 // =======================================================================//
 // !
@@ -355,15 +362,14 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
     }
 
     /* create a car */
+    static M2::C_Entity *ent;
     if (input_key_down(VK_F2)) {
-        mod_message_send(ctx, M2O_CAR_CREATE, nullptr);
+        //mod_message_send(ctx, M2O_CAR_CREATE, nullptr);
+        if (ent) {
+            ((M2::C_Human2*)ent)->CleanMoveCommands();
+            //((M2::C_Human2*)ent)->CleanCommands();
+        }
     }
-
-    /* create a car */
-    /*if (input_key_down(VK_F3)) {
-        mod_log("My C_Player2 address = 0x%x\n", ((M2::C_Human2 *)M2::C_Game::Get()->GetLocalPed()));
-        
-    }*/
 
     /* connect to the server */
     if (input_key_down(VK_F5) && !mod.spawned) {
@@ -371,65 +377,42 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
         mod.spawned = true;
     }
 
-    static M2::C_Entity *ent;
     if (input_key_down(VK_F3)) {
         if (!ent) {
             ent = M2::Wrappers::CreateEntity(M2::eEntityType::MOD_ENTITY_PED, 10);
-            //ent = M2::Wrappers::CreateEntity(M2::eEntityType::MOD_ENTITY_PLAYER, 10);
-            //M2::I_ActorActionModule::Get()->RegisterPlayer((M2::C_Actor*)ent);
         }
         if (ent) {
-            //*(uint8_t*)(((uintptr_t)ent) + 0x2E0) = 0x1;
             auto pos = reinterpret_cast<M2::C_Human2*>(M2::C_Game::Get()->GetLocalPed())->GetPos();
+            if (ent) {
+                ent->SetPosition(pos);
+            }
             pos.x += 1.f;
             pos.y += 1.f;
             pos.z -= 2.f;
             ent->SetPosition(pos);
+
+            mod_log("remote ped address = 0x%x\n", ((uintptr_t)ent));
+            mod_log("my ped address = 0x%x\n", ((uintptr_t)(M2::C_Game::Get()->GetLocalPed())));
         }
-
-        mod_log("Player created. Player address = 0x%x\n", (uintptr_t)ent);
-        mod_log("My C_Player2 address = 0x%x\n", ((uintptr_t)M2::C_Game::Get()->GetLocalPed()));
-
-        //((M2::C_PlayerModelManager*)(0x1ABFE5C))->CreatePlayer();
     }
-
-    /*if (ent) {
-        *(uint8_t*)(((uintptr_t)ent) + 0x2E0) = 0x1;
-        *(uint8_t*)(((uintptr_t)ent) + 0x2E1) = 0x2;
-        *(uint8_t*)(((uintptr_t)ent) + 0x2E6) = 0x20;
-    }*/
 
     if (input_key_down(VK_F4) && mod.spawned) {
         if (ent) {
-            static void* moveCommand = nullptr;
-            if (!moveCommand) {
-                //moveCommand = new char[0x58];
-                //((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_MOVEDIR, moveCommand);
-
-                moveCommand = new char[0x78];
-                ((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_FIGHT, moveCommand);
+            static bool moveInited = false;
+            static M2::RefPtr<M2::C_Command> moveCommand;
+            if (!moveInited) {
+                moveInited = true;
+                //moveCommand = zpl_malloc(0x58);
+                // zpl_zero_size(moveCommand, 0x58);
+                //mod_log("moveCommand address = 0x%x size: %d\n", ((uintptr_t)moveCommand), sizeof(moveCommand));
+                //moveCommand = CIE_Alloc(0x58);
+                moveCommand.ptr = new M2::S_HumanCommandMoveDir;
+                ZeroMemory(moveCommand.ptr, sizeof(M2::S_HumanCommandMoveDir));
+                ((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_MOVEDIR, moveCommand);
+                ((M2::C_Human2*)ent)->m_aCommandsArray[((M2::C_Human2*)ent)->m_iNextCommand] = moveCommand;
             }
-            mod_log("moveCommand address = 0x%x\n", ((uintptr_t)moveCommand));
-
-            if (((M2::C_Command*)moveCommand)->commandID == 1) {
-                M2::staticHumanCommandCallBaseMoveDir* cmd = (M2::staticHumanCommandCallBaseMoveDir*)moveCommand;
-                cmd->moveSpeed = 0;
-                cmd->potentialMoveVector = { 1.f, 1.f };
-            }
-
-            ((M2::C_Human2*)ent)->currentCommand = 1;
-            ((M2::C_Human2*)ent)->commandsArray[1].commandPtr = moveCommand;
+            mod_log("moveCommand address = 0x%x\n", ((uintptr_t)moveCommand.ptr));
         }
-
-        /*vec3_t pos;
-        pos = reinterpret_cast<M2::C_Entity*>(M2::C_Game::Get()->GetLocalPed())->GetPosition();
-
-        pos.z += 2.0;
-
-        M2::Wrappers::lua::Execute("game.sds:ActivateStreamMapLine(\"load_test\")");
-        M2::Wrappers::lua::Execute("icon = game.entitywrapper:GetEntityByName(\"RTR_POUTA1_00\")");
-        M2::Wrappers::lua::Execute("icon:Activate()");
-        M2::Wrappers::lua::Executef("icon:SetPos(Math:newVector(%f, %f, %f))", pos.x, pos.y, pos.z);*/
     }
 
     if (GetAsyncKeyState(VK_F7) & 0x1) {

@@ -4,8 +4,8 @@
 #include "cef_client.h"
 #include "wrapper/cef_helpers.h"
 
-class RenderHandler;
-class BrowserClient;
+class M2ORenderHandler;
+class M2OBrowserClient;
 
 struct cef_object {
     u8 type;
@@ -17,8 +17,8 @@ struct cef_object {
     i32 zindex;
 
     CefRefPtr<CefBrowser> browser;
-    CefRefPtr<BrowserClient> client;
-    CefRefPtr<RenderHandler> renderer;
+    CefRefPtr<M2OBrowserClient> client;
+    CefRefPtr<M2ORenderHandler> renderer;
 };
 
 struct {
@@ -32,7 +32,55 @@ struct {
 // !
 // =======================================================================//
 
-class RenderHandler : public CefRenderHandler {
+class M2OV8Handler : public CefV8Handler {
+public:
+    M2OV8Handler() {}
+
+    virtual bool Execute(const CefString& name, CefRefPtr<CefV8Value> object, const CefV8ValueList& args, CefRefPtr<CefV8Value>& ret, CefString& expt) override {
+        if (name == "myfunc") {
+            // Return my string value.
+            ret = CefV8Value::CreateString("My Value!");
+            return true;
+        }
+
+        // Function does not exist.
+        return false;
+    }
+
+    // Provide the reference counting implementation for this class.
+    IMPLEMENT_REFCOUNTING(M2OV8Handler);
+};
+
+class M2ORenderProcessHandler : public CefRenderProcessHandler {
+public:
+    M2ORenderProcessHandler() {}
+
+    void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override {
+        // Retrieve the context's window object.
+        CefRefPtr<CefV8Value> object = context->GetGlobal();
+
+        // Create a new V8 string value. See the "Basic JS Types" section below.
+        CefRefPtr<CefV8Value> str = CefV8Value::CreateString("My Value!");
+
+        // Add the string to the window object as "window.myval". See the "JS Objects" section below.
+        object->SetValue("myval", str, V8_PROPERTY_ATTRIBUTE_NONE);
+
+
+        // Create an instance of my CefV8Handler object.
+        CefRefPtr<CefV8Handler> handler = new M2OV8Handler();
+
+        // Create the "myfunc" function.
+        CefRefPtr<CefV8Value> func = CefV8Value::CreateFunction("myfunc", handler);
+
+        // Add the "myfunc" function to the "window" object.
+        object->SetValue("myfunc", func, V8_PROPERTY_ATTRIBUTE_NONE);
+    }
+
+    // Provide the reference counting implementation for this class.
+    IMPLEMENT_REFCOUNTING(M2ORenderProcessHandler);
+};
+
+class M2ORenderHandler : public CefRenderHandler {
     public:
         unsigned char* mPixelBuffer;
         int mPixelBufferWidth;
@@ -45,7 +93,7 @@ class RenderHandler : public CefRenderHandler {
 
         gfx_handle mTexture;
 
-        RenderHandler(int w, int h, int zindex) {
+        M2ORenderHandler(int w, int h, int zindex) {
             // inidcates if we should flip the pixel buffer in Y direction
             mFlipYPixels = false;
 
@@ -68,7 +116,7 @@ class RenderHandler : public CefRenderHandler {
             show(zindex);
         }
 
-        ~RenderHandler() {
+        ~M2ORenderHandler() {
             delete[] mPixelBuffer;
             delete[] mPopupBuffer;
             delete[] mPixelBufferRow;
@@ -129,10 +177,7 @@ class RenderHandler : public CefRenderHandler {
             return true;
         }
 
-        void OnCursorChange(CefRefPtr<CefBrowser> browser,
-                          CefCursorHandle cursor,
-                          CursorType type,
-                          const CefCursorInfo& custom_cursor_info) override {
+        void OnCursorChange(CefRefPtr<CefBrowser> browser, CefCursorHandle cursor, CursorType type, const CefCursorInfo& custom_cursor_info) override {
             SetClassLong((HWND)platform_windowid(), GCL_HCURSOR, (LONG)cursor);
         }
 
@@ -206,12 +251,12 @@ class RenderHandler : public CefRenderHandler {
             }
         }
 
-        IMPLEMENT_REFCOUNTING(RenderHandler);
+        IMPLEMENT_REFCOUNTING(M2ORenderHandler);
 };
 
-class BrowserClient : public CefClient, public CefLifeSpanHandler {
+class M2OBrowserClient : public CefClient, public CefLifeSpanHandler {
     public:
-        BrowserClient(RenderHandler* render_handler) : render_handler_(render_handler) {}
+        M2OBrowserClient(M2ORenderHandler* render_handler) : render_handler_(render_handler) {}
 
         CefRefPtr<CefRenderHandler> GetRenderHandler() override {
             return render_handler_;
@@ -269,7 +314,7 @@ class BrowserClient : public CefClient, public CefLifeSpanHandler {
         //     return true;
         // };
 
-        IMPLEMENT_REFCOUNTING(BrowserClient);
+        IMPLEMENT_REFCOUNTING(M2OBrowserClient);
 
     private:
         CefRefPtr<CefRenderHandler> render_handler_;
@@ -281,10 +326,14 @@ class CefMinimal : public CefApp {
     public:
         ~CefMinimal() { }
 
-        void CefMinimal::OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) override {
+        void OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) override {
             command_line->AppendSwitch("disable-smooth-scrolling");
             command_line->AppendSwitchWithValue("disable-features", "TouchpadAndWheelScrollLatching");
             command_line->AppendSwitchWithValue("disable-features", "AsyncWheelEvents");
+        }
+
+        CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override {
+            return new M2ORenderProcessHandler();
         }
 
         void navigate(const std::string url) {
@@ -303,8 +352,8 @@ class CefMinimal : public CefApp {
         IMPLEMENT_REFCOUNTING(CefMinimal);
 
     private:
-        CefRefPtr<RenderHandler> render_handler_;
-        CefRefPtr<BrowserClient> browser_client_;
+        CefRefPtr<M2ORenderHandler> render_handler_;
+        CefRefPtr<M2OBrowserClient> browser_client_;
         CefRefPtr<CefBrowser> browser_;
 };
 
@@ -406,8 +455,8 @@ class CefMinimal : public CefApp {
 
         obj->type     = 0;
         obj->zindex   = zindex;
-        obj->renderer = new RenderHandler(w, h, zindex);
-        obj->client   = new BrowserClient(obj->renderer);
+        obj->renderer = new M2ORenderHandler(w, h, zindex);
+        obj->client   = new M2OBrowserClient(obj->renderer);
         obj->browser  = CefBrowserHost::CreateBrowserSync(window_info, obj->client, cefurl, settings, nullptr);
 
         obj->browser->GetHost()->SetFocus(true);
@@ -541,11 +590,11 @@ class CefMinimal : public CefApp {
         return str.size();
     }
 
-    // =======================================================================//
-    // !
-    // ! Input handling
-    // !
-    // =======================================================================//
+// =======================================================================//
+// !
+// ! Input handling
+// !
+// =======================================================================//
 
     CefBrowserHost::MouseButtonType cef__translatemousebtn(SDL_MouseButtonEvent const &e) {
         CefBrowserHost::MouseButtonType result;
