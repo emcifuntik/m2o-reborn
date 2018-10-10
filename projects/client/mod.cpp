@@ -403,8 +403,11 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
         if (ent) {
             static void* moveCommand = nullptr;
             if (!moveCommand) {
-                moveCommand = new char[0x58];
-                ((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_MOVEDIR, moveCommand);
+                //moveCommand = new char[0x58];
+                //((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_MOVEDIR, moveCommand);
+
+                moveCommand = new char[0x78];
+                ((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_FIGHT, moveCommand);
             }
             mod_log("moveCommand address = 0x%x\n", ((uintptr_t)moveCommand));
 
