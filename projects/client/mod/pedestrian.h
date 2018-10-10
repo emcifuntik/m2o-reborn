@@ -128,8 +128,8 @@ void m2o_callback_ped_update(librg_event_t *event) {
         //ped->CHuman->AddCommand(M2::E_Command::COMMAND_STAND, ped->tasks.stand);
 
         // ped->tasks.movedir = CIE_Alloc(0x58); //zpl_zero_item(ped->tasks.movedir);
-        ped->tasks.movedir = new char[0x58]; //zpl_zero_item(ped->tasks.movedir);
-        ped->CHuman->AddCommand(M2::E_Command::COMMAND_MOVEDIR, ped->tasks.movedir);
+        //ped->tasks.movedir = new char[0x58]; //zpl_zero_item(ped->tasks.movedir);
+        //ped->CHuman->AddCommand(M2::E_Command::COMMAND_MOVEDIR, ped->tasks.movedir);
     }
 
     if (ped->state == PED_ON_GROUND && ped->tasks.init) {
@@ -142,8 +142,7 @@ void m2o_callback_ped_update(librg_event_t *event) {
                 cmd->potentialMoveVector = { ped->stream.dirx, ped->stream.diry };
             }
 
-            ped->CHuman->m_iCurrentCommand = 1;
-            ped->CHuman->m_aCommandsArray[1].m_pCommand = ped->tasks.movedir;
+            //ped->CHuman->m_aCommandsArray[ped->CHuman->m_iNextCommand] = ped->tasks.movedir;
         } else {
             // ped->CHuman->m_iCurrentCommand = 0;
             // ped->CHuman->m_aCommandsArray[0].m_pCommand = ped->tasks.stand;

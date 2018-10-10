@@ -30,6 +30,13 @@ namespace M2
         uint32_t int32_0x54; //0x0054
     }; //Size=0x0058
 
+    class S_HumanCommandStand : public C_Command
+    {
+    public:
+        zpl_vec2 standingDirVector; //0x0010
+        pad(S_HumanCommandMoveDir, pad1, 0x8);//0x0018
+    }; //Size=0x0058
+
     class C_CommandDescription
     {
     public:

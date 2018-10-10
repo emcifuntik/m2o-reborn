@@ -364,8 +364,13 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
     }
 
     /* create a car */
+    static M2::C_Entity *ent;
     if (input_key_down(VK_F2)) {
-        mod_message_send(ctx, M2O_CAR_CREATE, nullptr);
+        //mod_message_send(ctx, M2O_CAR_CREATE, nullptr);
+        if (ent) {
+            ((M2::C_Human2*)ent)->CleanMoveCommands();
+            //((M2::C_Human2*)ent)->CleanCommands();
+        }
     }
 
     /* connect to the server */
@@ -374,8 +379,6 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
         mod.spawned = true;
     }
 
-
-    static M2::C_Entity *ent;
     if (input_key_down(VK_F3)) {
         if (!ent) {
             ent = M2::Wrappers::CreateEntity(M2::eEntityType::MOD_ENTITY_PED, 10);
@@ -389,33 +392,37 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
             pos.y += 1.f;
             pos.z -= 2.f;
             ent->SetPosition(pos);
+
+            mod_log("remote ped address = 0x%x\n", ((uintptr_t)ent));
+            mod_log("my ped address = 0x%x\n", ((uintptr_t)(M2::C_Game::Get()->GetLocalPed())));
         }
     }
 
     if (input_key_down(VK_F4) && mod.spawned) {
         if (ent) {
-            static void* moveCommand = nullptr;
-            if (!moveCommand) {
+            static bool moveInited = false;
+            static M2::RefPtr<M2::C_Command> moveCommand;
+            if (!moveInited) {
+                moveInited = true;
                 //moveCommand = zpl_malloc(0x58);
                 // zpl_zero_size(moveCommand, 0x58);
                 //mod_log("moveCommand address = 0x%x size: %d\n", ((uintptr_t)moveCommand), sizeof(moveCommand));
-                moveCommand = CIE_Alloc(0x58);
-                //moveCommand = new char[0x58];
+                //moveCommand = CIE_Alloc(0x58);
+                moveCommand.ptr = new M2::S_HumanCommandMoveDir;
+                ZeroMemory(moveCommand.ptr, sizeof(M2::S_HumanCommandMoveDir));
                 ((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_MOVEDIR, moveCommand);
+                ((M2::C_Human2*)ent)->m_aCommandsArray[((M2::C_Human2*)ent)->m_iNextCommand] = moveCommand;
             }
 
+            mod_log("moveCommand address = 0x%x\n", ((uintptr_t)moveCommand.ptr));
+            
 
-            mod_log("moveCommand address = 0x%x size: %d\n", ((uintptr_t)moveCommand), sizeof(char[0x58]));
-
-            if (((M2::C_Command*)moveCommand)->m_iCommandID == 1) {
-                M2::S_HumanCommandMoveDir* cmd = (M2::S_HumanCommandMoveDir*)moveCommand;
+            /*if (((M2::C_Command*)moveCommand.ptr)->m_iCommandID == 1) {
+                M2::S_HumanCommandMoveDir* cmd = (M2::S_HumanCommandMoveDir*)moveCommand.ptr;
                 cmd->moveSpeed = 0;
-                cmd->speedMultiplier = 0.1f;
+                cmd->speedMultiplier = 1.0f;
                 cmd->potentialMoveVector = { 1.f, 1.f };
-            }
-
-            ((M2::C_Human2*)ent)->m_iCurrentCommand = 1;
-            ((M2::C_Human2*)ent)->m_aCommandsArray[1].m_pCommand = moveCommand;
+            }*/
         }
     }
 
