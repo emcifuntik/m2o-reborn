@@ -12,8 +12,10 @@ namespace M2
 {
     class C_Command {
     public:
-        pad(C_Command, pad0, 0xC);//0x0000
-        uint8_t m_iCommandID; //0x000C
+        pad(C_Command, pad0, 0x4);//0x0000
+        uint32_t countUsed;       //0x0004
+        pad(C_Command, pad1, 0x4);//0x0008
+        uint8_t m_iCommandID;     //0x000C
     };
 
     class S_HumanCommandMoveDir : public C_Command

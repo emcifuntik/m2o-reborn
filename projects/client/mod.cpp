@@ -361,13 +361,16 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
         input_block_set(!input_block_get());
     }
 
+    static M2::C_Command* moveCommand = nullptr;
+
     /* create a car */
     static M2::C_Entity *ent;
     if (input_key_down(VK_F2)) {
         //mod_message_send(ctx, M2O_CAR_CREATE, nullptr);
         if (ent) {
             ((M2::C_Human2*)ent)->CleanMoveCommands();
-            //((M2::C_Human2*)ent)->CleanCommands();
+            ((M2::C_Human2*)ent)->CleanCommands();
+            moveCommand = nullptr;
         }
     }
 
@@ -396,22 +399,22 @@ void m2o_module::tick(M2::I_TickedModuleCallEventContext &) {
         }
     }
 
-    if (input_key_down(VK_F4) && mod.spawned) {
+    if (input_key_down(VK_F16) && mod.spawned) {
         if (ent) {
-            static bool moveInited = false;
-            static M2::RefPtr<M2::C_Command> moveCommand;
-            if (!moveInited) {
-                moveInited = true;
+            if (!moveCommand) {
                 //moveCommand = zpl_malloc(0x58);
                 // zpl_zero_size(moveCommand, 0x58);
                 //mod_log("moveCommand address = 0x%x size: %d\n", ((uintptr_t)moveCommand), sizeof(moveCommand));
                 //moveCommand = CIE_Alloc(0x58);
-                moveCommand.ptr = new M2::S_HumanCommandMoveDir;
-                ZeroMemory(moveCommand.ptr, sizeof(M2::S_HumanCommandMoveDir));
+                moveCommand = (M2::C_Command*)CIE_Alloc(sizeof(M2::S_HumanCommandMoveDir));
+
+                ZeroMemory(moveCommand, sizeof(M2::S_HumanCommandMoveDir));
+                *(uintptr_t*)moveCommand = 0x19661BC;
+                moveCommand->countUsed = 1;
                 ((M2::C_Human2*)ent)->AddCommand(M2::E_Command::COMMAND_MOVEDIR, moveCommand);
-                ((M2::C_Human2*)ent)->m_aCommandsArray[((M2::C_Human2*)ent)->m_iNextCommand] = moveCommand;
+                ((M2::C_Human2*)ent)->m_aCommandsArray[((M2::C_Human2*)ent)->m_iNextCommand].m_pCommand = moveCommand;
             }
-            mod_log("moveCommand address = 0x%x\n", ((uintptr_t)moveCommand.ptr));
+            mod_log("moveCommand address = 0x%x\n", ((uintptr_t)moveCommand));
         }
     }
 

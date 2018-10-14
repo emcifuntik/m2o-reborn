@@ -170,7 +170,6 @@ namespace M2 {
 #include "classes/CPoliceWrapper.hpp"
 #include "classes/CProgramsDB.hpp"
 #include "classes/CRadio.hpp"
-#include "classes/CRefPtr.hpp"
 #include "classes/CRangeMeter.hpp"
 #include "classes/CRenderCamera.hpp"
 #include "classes/CResources.hpp"

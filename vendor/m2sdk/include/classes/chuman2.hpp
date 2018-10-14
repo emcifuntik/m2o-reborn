@@ -14,7 +14,6 @@
 #include "CHumanHeadController.hpp"
 #include "CCar.hpp"
 #include "CScene.hpp"
-#include "CRefPtr.hpp"
 
 #include "CHuman2Commands.hpp"
 
@@ -60,8 +59,9 @@ namespace M2
         pad(ICHuman2, pad2, 0x4);
 		C_HumanWeaponController *m_pWeaponController;	//00B0 - 00B4
         C_HumanHeadController   *m_pHeadController;     //00B4 - 00B8
-        pad(ICHuman2, pad4, 0x80);                      //00B8 - 0134
-        RefPtr<C_Command>   m_aCommandsArray[8];    //0134 - 0138
+        pad(ICHuman2, pad4, 0x7C);                      //00B8 - 0134
+        C_CommandDescription   m_aCommandsArray[8];    //0134 - 0138
+        pad(ICHuman2, pad5, 0x4);                      //00B8 - 0134
         uint32_t            m_aCommandsQueue[5];    //0178 - 018C
         int32_t             m_iNextCommand;         //018C 
 	};
@@ -73,9 +73,9 @@ namespace M2
 		C_HumanScript	*GetScript() { return reinterpret_cast<ICHuman2 *>(this)->m_pScript; }
 		C_HumanWeaponController	*GetWeaponController() { return reinterpret_cast<ICHuman2 *>(this)->m_pWeaponController; }
 
-        void AddCommand(E_Command cmdtype, M2::RefPtr<M2::C_Command> &cmd)
+        void AddCommand(E_Command cmdtype, M2::C_Command *cmd)
         {
-            Mem::InvokeFunction<Mem::call_this, int>(0x94D400, this, cmdtype, *(uintptr_t**)&cmd);
+            Mem::InvokeFunction<Mem::call_this, int>(0x94D400, this, cmdtype, cmd);
         }
 
         void ChangeModel(C_Frame *model, int unk, bool unk2, bool unk3)
